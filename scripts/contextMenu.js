@@ -1,32 +1,36 @@
-chrome.runtime.onInstalled.addListener(() => {
-    chrome.contextMenus.create({
+// background.js
+
+// On install, create context menu
+browser.runtime.onInstalled.addListener(() => {
+    browser.contextMenus.create({
         id: "saveLink",
         title: "Save link to break",
         contexts: ["link"]
     });
 
-    // chrome.contextMenus.create({
+    // You can re-enable these later if needed
+    // browser.contextMenus.create({
     //     id: "saveTextWithUrl",
     //     title: "Save selection with page URL",
     //     contexts: ["selection"]
     // });
-    
-    // chrome.contextMenus.create({
+    // browser.contextMenus.create({
     //     id: "savePage",
     //     title: "Save this page to memory",
     //     contexts: ["page"]
     // });
 });
 
-chrome.contextMenus.onClicked.addListener((info, tab) => {
-    switch (info.menuItemId){
+// On context menu click
+browser.contextMenus.onClicked.addListener((info, tab) => {
+    switch (info.menuItemId) {
         case "saveLink":
-            saveLinkToMemory(info,tab);
+            saveLinkToMemory(info, tab);
             break;
     }
 });
 
-function saveLinkToMemory(info, tab){
+async function saveLinkToMemory(info, tab) {
     const linkData = {
         id: Date.now().toString(),
         type: 'link',
@@ -38,28 +42,28 @@ function saveLinkToMemory(info, tab){
         tags: []
     };
 
-    chrome.storage.local.get(['memory_links'], (result) => {
+    try {
+        const result = await browser.storage.local.get('memory_links');
         const existingLinks = result.memory_links || [];
         existingLinks.push(linkData);
-
-        chrome.storage.local.set({
-            memory_links: existingLinks
-        }, () => {
-            if (chrome.runtime.lastError){
-                showNotification('Error saving link', 'error');
-            } else {
-                showNotification(`Link saved: ${linkData.title}`, 'success');
-            }
-        });
-    });
+        await browser.storage.local.set({ memory_links: existingLinks });
+        showNotification(`Link saved: ${linkData.title}`, 'success');
+    } catch (error) {
+        console.error(error);
+        showNotification('Error saving link', 'error');
+    }
 }
 
 function showNotification(message, type = 'info') {
-    const title = type === 'error' ? 'Error, Something went wrong': type === 'success' ? 'Success, saved to memory': 'Pomodoro Memory';
+    const title = type === 'error'
+        ? 'Error, Something went wrong'
+        : type === 'success'
+        ? 'Success, saved to memory'
+        : 'Pomodoro Memory';
 
-    chrome.notifications.create({
+    browser.notifications.create({
         type: 'basic',
-        iconUrl: 'images/icon.png', // Add this line
+        iconUrl: 'images/icon.png',
         title: title,
         message: message
     });
